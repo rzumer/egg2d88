@@ -39,7 +39,7 @@ for f in os.listdir(base_path):
 
 if len(input_files) == 0:
     print("No matching input files found.")
-    exit(0)
+    exit(1)
 
 # add entries for missing tracks and sort on track number
 for t in range(0, max(input_files, key=lambda tup: tup[0])[0]):
@@ -88,7 +88,7 @@ for t in input_files:
 
             except struct.error:
                 print("Error reading input data.")
-                exit(-1)
+                exit(2)
 
     disk.tracks.append(track)
 
