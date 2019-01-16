@@ -97,10 +97,10 @@ with open(args.output, 'wb') as f:
     # write disk header
     disk_header_size = 688; # TODO: confirm that this is always valid
     sector_header_size = 16;
-    f.write('\0' * 16 + '\0') # disk name/comment and terminator
-    f.write('\0' * 9) # reserved bits
-    f.write('\0') # write protect flag
-    f.write('\0') # media flag, hardcoded as 2D
+    f.write(('\0' * 16 + '\0').encode()) # disk name/comment and terminator
+    f.write(('\0' * 9).encode()) # reserved bits
+    f.write(b'\0') # write protect flag
+    f.write(b'\0') # media flag, hardcoded as 2D
     # TODO: detect the media and write the correct flag
 
     # compute and write the total output disk size
@@ -114,7 +114,7 @@ with open(args.output, 'wb') as f:
     track_offset = disk_header_size;
     for track in disk.tracks:
         if not any(track.sectors):
-            f.write('\0' * 4) # null track
+            f.write(('\0' * 4).encode()) # null track
         else:
             f.write(struct.pack('<I', track_offset))
             track_offset += sum([len(s.data) + sector_header_size
@@ -122,7 +122,7 @@ with open(args.output, 'wb') as f:
 
     # pad the disk header
     while f.tell() < disk_header_size:
-        f.write('\0' * 4) # null track
+        f.write(('\0' * 4).encode()) # null track
 
     # write sector contents
     for track in disk.tracks:
@@ -134,13 +134,13 @@ with open(args.output, 'wb') as f:
             f.write(struct.pack('B', sector.record))
             f.write(struct.pack('B', sector.size))
             f.write(struct.pack('<H', len(track.sectors)))
-            f.write('\0') # density, hardcoded as double
+            f.write(b'\0') # density, hardcoded as double
             # TODO: detect single/double density
-            f.write('\0') # DDAM flag, hardcoded as normal
+            f.write(b'\0') # DDAM flag, hardcoded as normal
             # TODO: detect deleted data
-            f.write('\0') # FDC status, hardcoded as normal
+            f.write(b'\0') # FDC status, hardcoded as normal
             # TODO: detect FDC status
-            f.write('\0' * 5) # reserved bits
+            f.write(('\0' * 5).encode()) # reserved bits
             f.write(struct.pack('<H', len(sector.data)))
             f.write(sector.data)
 
