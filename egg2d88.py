@@ -53,7 +53,7 @@ for t in input_files:
     track = Track()
 
     if t[1] is not None:
-        with open(t[1]) as f:
+        with open(t[1], 'rb') as f:
             try:
 
                 # get the number of sectors from the track header
