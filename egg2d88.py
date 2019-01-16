@@ -78,10 +78,14 @@ for t in input_files:
 
                     # TODO: find out the meaning of the unhandled sector header bits
                     # for now, assert that the values of the next 8 bytes are those expected
+                    # usually 01 00 00 00
+                    # sometimes 01 00 B0 00
                     magic_bits = struct.unpack_from('<I', f.read(4))[0]
-                    assert magic_bits == 1
-                    magic_bits = struct.unpack_from('<I', f.read(4))[0]
-                    assert magic_bits == 128 << s.size # seems to correspond
+                    assert (magic_bits == 1 or
+                        magic_bits == 11534337), "Unexpected magic bits on track {:d} at offset {:d} ({:d}).".format(
+                        t[0], f.tell(), magic_bits)
+                    data_size = struct.unpack_from('<I', f.read(4))[0]
+                    assert data_size == 128 << s.size
 
                     # read sector content
                     s.data = f.read(128 << s.size)
