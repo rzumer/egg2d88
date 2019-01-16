@@ -44,12 +44,21 @@ with open(args.input, 'rb') as f:
             # process track contents
             for o, s in zip(sector_offsets, track.sectors):
                 f.seek(track_offset + o, os.SEEK_SET)
+
+                # read sector header
                 s.cylinder = struct.unpack('B', f.read(1))[0]
                 s.head = struct.unpack('B', f.read(1))[0]
                 s.record = struct.unpack('B', f.read(1))[0]
                 s.size = struct.unpack('B', f.read(1))[0]
-                f.seek(8, os.SEEK_CUR) # skip the remainder of the header
+
                 # TODO: find out the meaning of the unhandled sector header bits
+                # for now, assert that the values of the next 8 bytes are those expected
+                magic_bits = struct.unpack('<I', f.read(4))[0]
+                assert magic_bits == 1
+                magic_bits = struct.unpack('<I', f.read(4))[0]
+                assert magic_bits == 256
+
+                # read sector content
                 s.data = f.read(128 << s.size)
 
             disk.tracks.append(track)
