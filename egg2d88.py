@@ -16,55 +16,81 @@ class Sector:
 
 import argparse, os, struct
 
-# TODO: implement an interface for unconcatenated EGG files, in order to label
-# missing sectors correctly in the D88 header
 parser = argparse.ArgumentParser(description='Convert EGG to D88.')
-parser.add_argument('input', metavar='input_file', help='the input EGG file')
+parser.add_argument('input', metavar='input_prefix', help='the input EGG image file name prefix')
 parser.add_argument('output', metavar='output_file', nargs='?', default='out.d88', help='the output D88 file')
 args = parser.parse_args()
 
 disk = Disk()
 
-with open(args.input, 'rb') as f:
-    while True:
+# get matching input files
+base_path = os.path.dirname(args.input)
+file_prefix = os.path.basename(args.input)
+input_files = []
+
+for f in os.listdir(base_path):
+    full_path = os.path.join(base_path, f)
+    if os.path.isfile(full_path) and f.startswith(file_prefix):
         try:
-            track = Track()
-            track_offset = f.tell()
+            track_number = int(os.path.splitext(f)[0].split('-')[-1])
+            input_files.append( (track_number, full_path) ) # add as tuple
+        except ValueError:
+            pass
 
-            # get the number of sectors from the track header
-            num_sectors = struct.unpack_from('<I', f.read(4))[0]
-            sector_offsets = []
+if len(input_files) == 0:
+    print("No matching input files found.")
+    exit(0)
 
-            # process sector offsets
-            for s in range(0, num_sectors):
-                sector = Sector()
-                sector_offsets.append(struct.unpack_from('<I', f.read(4))[0])
-                track.sectors.append(sector)
+# add entries for missing tracks and sort on track number
+for t in range(0, max(input_files, key=lambda tup: tup[0])[0]):
+    if not any([item[0] == t for item in input_files]):
+        input_files.append( (t, None) )
 
-            # process track contents
-            for o, s in zip(sector_offsets, track.sectors):
-                f.seek(track_offset + o, os.SEEK_SET)
+input_files.sort(key=lambda tup: tup[0]) # sort on track number
 
-                # read sector header
-                s.cylinder = struct.unpack_from('B', f.read(1))[0]
-                s.head = struct.unpack_from('B', f.read(1))[0]
-                s.record = struct.unpack_from('B', f.read(1))[0]
-                s.size = struct.unpack_from('B', f.read(1))[0]
+# parse EGG input
+for t in input_files:
+    track = Track()
 
-                # TODO: find out the meaning of the unhandled sector header bits
-                # for now, assert that the values of the next 8 bytes are those expected
-                magic_bits = struct.unpack_from('<I', f.read(4))[0]
-                assert magic_bits == 1
-                magic_bits = struct.unpack_from('<I', f.read(4))[0]
-                assert magic_bits == 128 << s.size # seems to correspond
+    if t[1] is not None:
+        with open(t[1]) as f:
+            try:
 
-                # read sector content
-                s.data = f.read(128 << s.size)
+                # get the number of sectors from the track header
+                num_sectors = struct.unpack_from('<I', f.read(4))[0]
+                sector_offsets = []
 
-            disk.tracks.append(track)
+                # process sector offsets
+                for s in range(0, num_sectors):
+                    sector = Sector()
+                    sector_offsets.append(struct.unpack_from('<I', f.read(4))[0])
+                    track.sectors.append(sector)
 
-        except struct.error:
-            break
+                # process track contents
+                for o, s in zip(sector_offsets, track.sectors):
+                    f.seek(o, os.SEEK_SET)
+
+                    # read sector header
+                    s.cylinder = struct.unpack_from('B', f.read(1))[0]
+                    s.head = struct.unpack_from('B', f.read(1))[0]
+                    s.record = struct.unpack_from('B', f.read(1))[0]
+                    s.size = struct.unpack_from('B', f.read(1))[0]
+
+                    # TODO: find out the meaning of the unhandled sector header bits
+                    # for now, assert that the values of the next 8 bytes are those expected
+                    magic_bits = struct.unpack_from('<I', f.read(4))[0]
+                    assert magic_bits == 1
+                    magic_bits = struct.unpack_from('<I', f.read(4))[0]
+                    assert magic_bits == 128 << s.size # seems to correspond
+
+                    # read sector content
+                    s.data = f.read(128 << s.size)
+
+            except struct.error:
+                print("Error reading input data.")
+                exit(-1)
+
+    disk.tracks.append(track)
 
 # write D88 output
 with open(args.output, 'wb') as f:
@@ -87,16 +113,21 @@ with open(args.output, 'wb') as f:
     # write the track table
     track_offset = disk_header_size;
     for track in disk.tracks:
-        f.write(struct.pack('<I', track_offset))
-        track_offset += sum([len(s.data) + sector_header_size
-            for s in track.sectors])
+        if not any(track.sectors):
+            f.write('\0' * 4) # null track
+        else:
+            f.write(struct.pack('<I', track_offset))
+            track_offset += sum([len(s.data) + sector_header_size
+                for s in track.sectors])
 
     # pad the disk header
     while f.tell() < disk_header_size:
-        f.write('\0' * 4) # null sector
+        f.write('\0' * 4) # null track
 
     # write sector contents
     for track in disk.tracks:
+        if not any(track.sectors):
+            continue # skip null tracks
         for sector in track.sectors:
             f.write(struct.pack('B', sector.cylinder))
             f.write(struct.pack('B', sector.head))
