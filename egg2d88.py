@@ -99,7 +99,7 @@ for t in input_files:
 # write D88 output
 with open(args.output, 'wb') as f:
     # write disk header
-    disk_header_size = 688; # TODO: confirm that this is always valid
+    disk_header_size = 688;
     sector_header_size = 16;
     f.write(('\0' * 16 + '\0').encode()) # disk name/comment and terminator
     f.write(('\0' * 9).encode()) # reserved bits
