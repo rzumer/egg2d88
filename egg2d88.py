@@ -80,10 +80,12 @@ for t in input_files:
                     # for now, assert that the values of the next 8 bytes are those expected
                     # usually 01 00 00 00
                     # sometimes 01 00 B0 00
+                    # sometimes 01 00 F0 00
+                    # sometimes 01 01 00 00
                     magic_bits = struct.unpack_from('<I', f.read(4))[0]
-                    assert (magic_bits == 1 or
-                        magic_bits == 11534337), "Unexpected magic bits on track {:d} at offset {:d} ({:d}).".format(
-                        t[0], f.tell(), magic_bits)
+                    if (magic_bits != 1):
+                        print("Unexpected magic bits on track {:d} at offset {:d} ({:d})."
+                        .format(t[0], f.tell(), magic_bits))
                     data_size = struct.unpack_from('<I', f.read(4))[0]
                     assert data_size == 128 << s.size
 
