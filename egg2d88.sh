@@ -7,16 +7,16 @@
 
 rm -r img/*;
 
-set -e
 quickbms -F "*.exe" -o project_egg.bms $1 img;
 
 idx=0
-error=0
+ret=0
 
-while [ $? -eq 0 ]
+while [ $ret -eq 0 ]
     do
-        python egg2d88.py img/EGGFDIMG$idx ${1%.*}-$idx.d88
-        ((idx++))
+        python egg2d88.py img/EGGFDIMG$idx ${1%.*}-$idx.d88;
+        ret=$?;
+        ((idx++));
     done
 
 echo "Done.";
