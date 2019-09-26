@@ -77,11 +77,12 @@ for t in input_files:
                     s.size = struct.unpack_from('B', f.read(1))[0]
 
                     # TODO: find out the meaning of the unhandled sector header bits
-                    # for now, assert that the values of the next 8 bytes are those expected
+                    # they do not seem to affect the output's accuracy. so just
+                    # print them out as a warning if they are unusual
                     # usually 01 00 00 00
                     # sometimes 01 00 B0 00
                     # sometimes 01 00 F0 00
-                    # sometimes 01 01 00 00
+                    # sometimes 01 01 00 00...
                     magic_bits = struct.unpack_from('<I', f.read(4))[0]
                     if (magic_bits != 1):
                         print("Unexpected magic bits on track {:d} at offset {:d} ({:d})."
