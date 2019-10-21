@@ -1,12 +1,12 @@
 @ECHO off
 
-if "%1"=="" (
+if "%~1"=="" (
     ECHO An input file is required.
     EXIT -1
 )
 
 del /F /Q img\*
-quickbms.exe -F "*.exe" -o project_egg.bms %~1 img
+quickbms.exe -F "*.exe" -o project_egg.bms "%~1" img
 
 set /A idx=0
 
